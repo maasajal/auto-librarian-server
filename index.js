@@ -6,9 +6,14 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
+const corsOptions = {
+  origin: ["http://localhost:5173", "https://auto-e-librarian.web.app"],
+  credentials: true,
+  optionSuccessStatus: 200,
+};
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors(corsOptions));
 
 app.get("/", (req, res) => {
   res.send("Welcome to Auto Librarian, a LearnEdge e-Library!");
@@ -53,6 +58,13 @@ const run = async () => {
       const cursor = bookCategories.find();
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+    app.get("/books", async (req, res) => {
+      const { category } = req.query;
+      const filter = category ? { category } : {};
+      const books = await booksCollection.find(filter).toArray();
+      res.send(books);
     });
 
     app.post("/books", async (req, res) => {
