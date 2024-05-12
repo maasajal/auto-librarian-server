@@ -41,6 +41,14 @@ const run = async () => {
       res.send(result);
     });
 
+    app.get("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log("Single id: ", id);
+      const query = { _id: new ObjectId(id) };
+      const book = await booksCollection.findOne(query);
+      res.send(book);
+    });
+
     app.get("/book-categories", async (req, res) => {
       const cursor = bookCategories.find();
       const result = await cursor.toArray();
@@ -52,6 +60,31 @@ const run = async () => {
       console.log("New Book", newBook);
       // insertOne item and send to database
       const result = await booksCollection.insertOne(newBook);
+      res.send(result);
+    });
+
+    app.put("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const book = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateBook = {
+        $set: {
+          image: book.image,
+          category: book.category,
+          name: book.name,
+          authorName: book.authorName,
+          quantity: book.quantity,
+          rating: book.rating,
+          description: book.description,
+          aboutBook: book.aboutBook,
+        },
+      };
+      const result = await booksCollection.updateOne(
+        filter,
+        updateBook,
+        options
+      );
       res.send(result);
     });
 
