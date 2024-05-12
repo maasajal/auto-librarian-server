@@ -31,7 +31,9 @@ const run = async () => {
 
     // Create database and collection as table
     const booksCollection = client.db("AutoLibrarianDB").collection("books");
-    const bookCategories = client.db("AutoLibrarianDB").collection("bookCategories");
+    const bookCategories = client
+      .db("AutoLibrarianDB")
+      .collection("bookCategories");
 
     app.get("/books", async (req, res) => {
       const cursor = booksCollection.find();
@@ -50,6 +52,14 @@ const run = async () => {
       console.log("New Book", newBook);
       // insertOne item and send to database
       const result = await booksCollection.insertOne(newBook);
+      res.send(result);
+    });
+
+    app.delete("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log("Delete from database", id);
+      const query = { _id: new ObjectId(id) };
+      const result = await booksCollection.deleteOne(query);
       res.send(result);
     });
 
