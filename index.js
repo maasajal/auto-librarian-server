@@ -39,6 +39,7 @@ const run = async () => {
     const bookCategories = client
       .db("AutoLibrarianDB")
       .collection("bookCategories");
+    const borrowBooks = client.db("AutoLibrarianDB").collection("borrowBooks");
 
     app.get("/books", async (req, res) => {
       const cursor = booksCollection.find();
@@ -72,6 +73,14 @@ const run = async () => {
       console.log("New Book", newBook);
       // insertOne item and send to database
       const result = await booksCollection.insertOne(newBook);
+      res.send(result);
+    });
+
+    app.post("/borrow-books", async (req, res) => {
+      const borrowBook = req.body; // get borrow item from client site
+      console.log("Borrow Book", borrowBook);
+      // insertOne item and send to database
+      const result = await borrowBooks.insertOne(borrowBook);
       res.send(result);
     });
 
