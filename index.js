@@ -61,6 +61,29 @@ const run = async () => {
       res.send(result);
     });
 
+    app.get("/borrow-books", async (req, res) => {
+      const cursor = borrowBooks.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/borrowed-books/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const result = await borrowBooks.find(query).toArray();
+      res.send(result);
+    });
+
+    app.patch("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $inc: { quantity: -1 },
+      };
+      const result = await booksCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
     app.get("/books", async (req, res) => {
       const { category } = req.query;
       const filter = category ? { category } : {};
@@ -91,14 +114,7 @@ const run = async () => {
       const options = { upsert: true };
       const updateBook = {
         $set: {
-          image: book.image,
-          category: book.category,
-          name: book.name,
-          authorName: book.authorName,
-          quantity: book.quantity,
-          rating: book.rating,
-          description: book.description,
-          aboutBook: book.aboutBook,
+          ...book,
         },
       };
       const result = await booksCollection.updateOne(
@@ -114,6 +130,14 @@ const run = async () => {
       console.log("Delete from database", id);
       const query = { _id: new ObjectId(id) };
       const result = await booksCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.delete("/borrowed-books/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log("Delete from database", id);
+      const query = { _id: new ObjectId(id) };
+      const result = await borrowBooks.deleteOne(query);
       res.send(result);
     });
 
