@@ -28,7 +28,6 @@ const verifyJWToken = (req, res, next) => {
         console.error(err);
         return res.status(401).send({ message: "unauthorized access" });
       }
-      console.log(decoded);
       req.user = decoded;
       next();
     });
@@ -123,11 +122,21 @@ const run = async () => {
       res.send(result);
     });
 
-    app.patch("/books/:id", async (req, res) => {
+    app.patch("/borrow-book/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $inc: { quantity: -1 },
+      };
+      const result = await booksCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+    app.patch("/return-book/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id)
+      const query = { id };
+      const updateDoc = {
+        $inc: { quantity: 1 },
       };
       const result = await booksCollection.updateOne(query, updateDoc);
       res.send(result);
@@ -185,7 +194,8 @@ const run = async () => {
     app.delete("/borrowed-books/:id", async (req, res) => {
       const id = req.params.id;
       console.log("Delete from database", id);
-      const query = { _id: new ObjectId(id) };
+      // const query = { _id: new ObjectId(id) };
+      const query = { id };
       const result = await borrowBooks.deleteOne(query);
       res.send(result);
     });
