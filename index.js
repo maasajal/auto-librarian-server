@@ -16,6 +16,24 @@ const corsOptions = {
 // Middleware
 app.use(express.json());
 app.use(cors(corsOptions));
+app.use(cookieParser());
+
+// jwt middleware
+const verifyJWToken = (req, res, next) => {
+  const token = req.cookies?.Token;
+  if (!token) return res.status(401).send({ message: "unauthorized access" });
+  if (token) {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+      if (err) {
+        console.error(err);
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      console.log(decoded);
+      req.user = decoded;
+      next();
+    });
+  }
+};
 
 app.get("/", (req, res) => {
   res.send("Welcome to Auto Librarian, a LearnEdge e-Library!");
@@ -57,6 +75,16 @@ const run = async () => {
         .send({ success: true });
     });
 
+    app.get("/logout", (req, res) => {
+      res
+        .clearCookie("Token", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          maxAge: 0,
+        })
+        .send({ success: true });
+    });
 
     app.get("/books", async (req, res) => {
       const cursor = booksCollection.find();
@@ -78,14 +106,18 @@ const run = async () => {
       res.send(result);
     });
 
-    app.get("/borrow-books", async (req, res) => {
+    app.get("/borrow-books", verifyJWToken, async (req, res) => {
       const cursor = borrowBooks.find();
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.get("/borrowed-books/:email", async (req, res) => {
+    app.get("/borrowed-books/:email", verifyJWToken, async (req, res) => {
+      const tokenEmail = req.user.email;
       const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const query = { email };
       const result = await borrowBooks.find(query).toArray();
       res.send(result);
@@ -108,7 +140,7 @@ const run = async () => {
       res.send(books);
     });
 
-    app.post("/books", async (req, res) => {
+    app.post("/books", verifyJWToken, async (req, res) => {
       const newBook = req.body; // get new item from client site
       console.log("New Book", newBook);
       // insertOne item and send to database
