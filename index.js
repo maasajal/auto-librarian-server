@@ -9,9 +9,13 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "https://auto-e-librarian.web.app"],
+  origin: [
+    "http://localhost:5173",
+    "https://auto-e-librarian.web.app",
+    "https://auto-e-librarian.firebaseapp.com",
+  ],
   credentials: true,
-  optionSuccessStatus: 200,
+  // optionSuccessStatus: 200,
 };
 // Middleware
 app.use(express.json());
@@ -20,7 +24,7 @@ app.use(cookieParser());
 
 // jwt middleware
 const verifyJWToken = (req, res, next) => {
-  const token = req.cookies?.Token;
+  const token = req.cookies?.token;
   if (!token) return res.status(401).send({ message: "unauthorized access" });
   if (token) {
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
@@ -48,6 +52,14 @@ const client = new MongoClient(uri, {
   },
 });
 
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  secure: process.env.NODE_ENV === "production",
+  // sameSite: "none",
+  // secure: true,
+};
+
 const run = async () => {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -63,25 +75,17 @@ const run = async () => {
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "365d",
+        expiresIn: "5h",
       });
-      res
-        .cookie("Token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-        })
-        .send({ success: true });
+      // res.send({ token });
+      res.cookie("token", token, cookieOptions).send({ success: true });
     });
 
-    app.get("/logout", (req, res) => {
+    app.post("/logout", async (req, res) => {
+      // const user = req.body;
+      // console.log("Logging out", user);
       res
-        .clearCookie("Token", {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-          maxAge: 0,
-        })
+        .clearCookie("token", { ...cookieOptions, maxAge: 0 })
         .send({ success: true });
     });
 
@@ -93,7 +97,7 @@ const run = async () => {
 
     app.get("/books/:id", async (req, res) => {
       const id = req.params.id;
-      console.log("Single id: ", id);
+      // console.log("Single id: ", id);
       const query = { _id: new ObjectId(id) };
       const book = await booksCollection.findOne(query);
       res.send(book);
@@ -105,13 +109,15 @@ const run = async () => {
       res.send(result);
     });
 
-    app.get("/borrow-books", verifyJWToken, async (req, res) => {
-      const cursor = borrowBooks.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+    // Get all the Borrowed books
+    // app.get("/borrow-books", verifyJWToken, async (req, res) => {
+    //   const cursor = borrowBooks.find();
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
 
     app.get("/borrowed-books/:email", verifyJWToken, async (req, res) => {
+      // console.log("cookie", req.cookies);
       const tokenEmail = req.user.email;
       const email = req.params.email;
       if (tokenEmail !== email) {
@@ -150,7 +156,7 @@ const run = async () => {
 
     app.post("/books", verifyJWToken, async (req, res) => {
       const newBook = req.body; // get new item from client site
-      console.log("New Book", newBook);
+      // console.log("New Book", newBook);
       // insertOne item and send to database
       const result = await booksCollection.insertOne(newBook);
       res.send(result);
@@ -158,7 +164,7 @@ const run = async () => {
 
     app.post("/borrow-books", async (req, res) => {
       const borrowBook = req.body; // get borrow item from client site
-      console.log("Borrow Book", borrowBook);
+      // console.log("Borrow Book", borrowBook);
       // insertOne item and send to database
       const result = await borrowBooks.insertOne(borrowBook);
       res.send(result);
@@ -184,7 +190,7 @@ const run = async () => {
 
     app.delete("/books/:id", async (req, res) => {
       const id = req.params.id;
-      console.log("Delete from database", id);
+      // console.log("Delete from database", id);
       const query = { _id: new ObjectId(id) };
       const result = await booksCollection.deleteOne(query);
       res.send(result);
@@ -192,7 +198,7 @@ const run = async () => {
 
     app.delete("/borrowed-books/:id", async (req, res) => {
       const id = req.params.id;
-      console.log("Delete from database", id);
+      // console.log("Delete from database", id);
       // const query = { _id: new ObjectId(id) };
       const query = { id };
       const result = await borrowBooks.deleteOne(query);
@@ -201,9 +207,9 @@ const run = async () => {
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -212,5 +218,5 @@ const run = async () => {
 run().catch(console.dir);
 
 app.listen(port, () => {
-  console.log(`Auto Librarian server running on port ${port}!`);
+  // console.log(`Auto Librarian server running on port ${port}!`);
 });
